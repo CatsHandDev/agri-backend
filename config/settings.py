@@ -11,7 +11,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # Dockerコンテナ内からはホストの .env は直接見えないので、
 # 環境変数は docker-compose.yml の environment で渡すのが一般的
 # この load_dotenv はローカルで直接 `python manage.py` を実行する場合に有効
-dotenv_path = os.path.join(BASE_DIR, "../../.env")  # ルートの .env を指すように調整
+dotenv_path = os.path.join(BASE_DIR, "../.env")  # ルートの .env を指すように調整
 load_dotenv(dotenv_path=dotenv_path)
 
 # SECURITY WARNING: keep the secret key used in production secret!
@@ -19,7 +19,16 @@ load_dotenv(dotenv_path=dotenv_path)
 SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", "django-insecure-fallback-key-local")
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = os.environ.get("DJANGO_DEBUG", "True") == "True"  # 環境変数から読み込む
+DEBUG = os.environ.get("DJANGO_DEBUG", "False") == "True"  # 環境変数から読み込む
+if not DEBUG:
+    # DEBUG が False の場合、ALLOWED_HOSTS に自身の公開ドメインを追加する必要がある
+    # Render の場合、ホスト名が自動で設定されることが多いので $RENDER_EXTERNAL_HOSTNAME を利用
+    # または Render の環境変数で ALLOWED_HOSTS を明示的に設定
+    # Render の環境変数に DJANGO_ALLOWED_HOSTS = your-django-backend.onrender.com を設定
+    ALLOWED_HOSTS = [
+        ".onrender.com"  # Render のデフォルトサブドメイン
+        # os.environ.get("DJANGO_ALLOWED_HOSTS", "").split(",")
+    ]
 
 ALLOWED_HOSTS = [
     "localhost",
@@ -156,6 +165,7 @@ REST_FRAMEWORK = {
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",  # Next.js の開発サーバー
     "http://127.0.0.1:3000",
+    "https://agri-frontend-seven.vercel.app",
 ]
 CORS_ALLOW_CREDENTIALS = True  # 必要に応じて
 

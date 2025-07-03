@@ -1,3 +1,8 @@
-from django.shortcuts import render
+from django.http import JsonResponse  # type: ignore
 
-# Create your views here.
+
+def api_root(request):
+    """
+    APIのルートにアクセスした際に表示するシンプルなビュー
+    """
+    return JsonResponse({"status": "ok", "message": "Welcome to the Agri-Support API!"})
