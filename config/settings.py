@@ -2,6 +2,7 @@ import os
 from dotenv import load_dotenv
 from pathlib import Path
 from datetime import timedelta
+import dj_database_url  # type: ignore
 
 EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
 
@@ -28,6 +29,11 @@ ALLOWED_HOSTS = [
     "192.168.3.2",
     "172.25.80.1",
 ]  # コンテナ名やDockerネットワーク内からのアクセスを許可
+
+# Renderのホスト名を環境変数から取得して追加
+RENDER_EXTERNAL_HOSTNAME = os.environ.get("RENDER_EXTERNAL_HOSTNAME")
+if RENDER_EXTERNAL_HOSTNAME:
+    ALLOWED_HOSTS.append(RENDER_EXTERNAL_HOSTNAME)
 
 # Application definition
 INSTALLED_APPS = [
@@ -58,6 +64,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "corsheaders.middleware.CorsMiddleware",
@@ -91,31 +98,21 @@ WSGI_APPLICATION = "config.wsgi.application"
 
 
 # Database
-# https://docs.djangoproject.com/en/stable/ref/settings/#databases
-# 環境変数からデータベース接続情報を取得
-POSTGRES_DB = os.environ.get("POSTGRES_DB")
-POSTGRES_USER = os.environ.get("POSTGRES_USER")
-POSTGRES_PASSWORD = os.environ.get("POSTGRES_PASSWORD")
-POSTGRES_HOST = os.environ.get("POSTGRES_HOST")
-POSTGRES_PORT = os.environ.get("POSTGRES_PORT")
-
 DATABASES = {
     "default": {
-        "ENGINE": "django.db.backends.postgresql",
-        "NAME": POSTGRES_DB,
-        "USER": POSTGRES_USER,
-        "PASSWORD": POSTGRES_PASSWORD,
-        "HOST": POSTGRES_HOST,  # docker-compose.yml で定義したサービス名
-        "PORT": POSTGRES_PORT,  # PostgreSQLのデフォルトポート
+        "ENGINE": "django.db.backends.sqlite3",
+        "NAME": BASE_DIR / "db.sqlite3",
     }
 }
 
+if "DATABASE_URL" in os.environ:
+    DATABASES["default"] = dj_database_url.config(
+        conn_max_age=600,
+        conn_health_checks=True,
+        # RenderのPostgreSQLはSSL接続が必須
+        ssl_require=os.environ.get("RENDER", "") != "",
+    )
 
-# Password validation
-# ... (既存のパスワードバリデータ設定)
-
-# Internationalization
-# ... (既存の言語・タイムゾーン設定)
 LANGUAGE_CODE = "ja"
 TIME_ZONE = "Asia/Tokyo"
 USE_I18N = True
@@ -127,6 +124,7 @@ USE_TZ = True
 STATIC_URL = "/static/"
 # `python manage.py collectstatic` で集められるディレクトリ
 STATIC_ROOT = os.path.join(BASE_DIR, "../staticfiles")
+STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
 
 # Media files (User uploaded files)
 MEDIA_URL = "/media/"
